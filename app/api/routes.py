@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
 from app.core.config import get_settings
-from app.services.xtts import xtts_service
+from app.services.xtts import InvalidSpeakerAudioError, xtts_service
 
 
 router = APIRouter()
@@ -48,6 +48,9 @@ async def tts(
         )
     except HTTPException:
         raise
+    except InvalidSpeakerAudioError as exc:
+        logger.warning("Invalid speaker audio: %s", exc)
+        raise HTTPException(status_code=400, detail="Invalid speaker audio") from exc
     except Exception as exc:
         logger.exception("XTTS synthesis failed: %s", exc)
         raise HTTPException(status_code=500, detail="XTTS synthesis failed") from exc

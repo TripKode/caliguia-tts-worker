@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -9,6 +10,7 @@ from app.services.xtts import xtts_service
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/health")
@@ -37,12 +39,18 @@ async def tts(
         clean_language = "es"
 
     speaker_suffix = Path(speaker_wav.filename or "speaker.wav").suffix or ".wav"
-    output_path = xtts_service.synthesize(
-        text=clean_text,
-        language=clean_language,
-        speaker_bytes=await speaker_wav.read(),
-        speaker_suffix=speaker_suffix,
-    )
+    try:
+        output_path = xtts_service.synthesize(
+            text=clean_text,
+            language=clean_language,
+            speaker_bytes=await speaker_wav.read(),
+            speaker_suffix=speaker_suffix,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("XTTS synthesis failed: %s", exc)
+        raise HTTPException(status_code=500, detail="XTTS synthesis failed") from exc
 
     return FileResponse(
         output_path,

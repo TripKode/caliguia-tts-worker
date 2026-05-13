@@ -5,6 +5,7 @@ ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
 ENV COQUI_TOS_AGREED=1
 ENV XTTS_FORCE_CPU=1
+ENV XTTS_MODEL_NAME=tts_models/multilingual/multi-dataset/xtts_v2
 
 WORKDIR /app
 
@@ -19,6 +20,8 @@ RUN apt-get update \
 COPY requirements.txt .
 RUN pip install --upgrade pip \
   && pip install -r requirements.txt
+
+RUN python -c "import os; from TTS.api import TTS; TTS(os.environ['XTTS_MODEL_NAME'], gpu=False)"
 
 COPY app ./app
 COPY main.py ./main.py

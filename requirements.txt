@@ -4,5 +4,6 @@ soundfile==0.13.1
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.5.1+cpu
 torchaudio==2.5.1+cpu
+transformers==4.40.2
 TTS==0.22.0
 uvicorn[standard]==0.38.0

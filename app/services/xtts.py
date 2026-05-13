@@ -28,6 +28,9 @@ class XttsService:
             self._model = TTS(settings.model_name, gpu=use_gpu)
         return self._model
 
+    def preload(self) -> None:
+        self._get_model()
+
     def synthesize(self, text: str, language: str, speaker_bytes: bytes, speaker_suffix: str) -> Path:
         suffix = speaker_suffix or ".wav"
 

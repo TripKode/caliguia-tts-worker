@@ -2,8 +2,7 @@ fastapi==0.124.0
 python-multipart==0.0.20
 soundfile==0.13.1
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.5.1+cpu
-torchaudio==2.5.1+cpu
-transformers==4.40.2
-TTS==0.22.0
+torch==2.8.0+cpu
+torchaudio==2.8.0+cpu
+f5-tts==1.1.20
 uvicorn[standard]==0.38.0

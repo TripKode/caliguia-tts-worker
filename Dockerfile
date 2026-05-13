@@ -1,19 +1,18 @@
-FROM python:3.10-slim AS runtime
+FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
-ENV COQUI_TOS_AGREED=1
-ENV XTTS_FORCE_CPU=1
-ENV XTTS_MODEL_NAME=tts_models/multilingual/multi-dataset/xtts_v2
-ENV XTTS_PRELOAD_ON_STARTUP=1
+ENV F5_TTS_FORCE_CPU=1
+ENV F5_TTS_MODEL_NAME=F5TTS_v1_Base
+ENV F5_TTS_NFE_STEP=16
+ENV F5_TTS_PRELOAD_ON_STARTUP=1
 
 WORKDIR /app
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     build-essential \
-    espeak-ng \
     ffmpeg \
     libsndfile1 \
   && rm -rf /var/lib/apt/lists/*
@@ -22,7 +21,7 @@ COPY requirements.txt .
 RUN pip install --upgrade pip \
   && pip install -r requirements.txt
 
-RUN python -c "import os; from TTS.api import TTS; TTS(os.environ['XTTS_MODEL_NAME'], gpu=False)"
+RUN python -c "import os; from f5_tts.api import F5TTS; F5TTS(model=os.environ['F5_TTS_MODEL_NAME'], device='cpu')"
 
 COPY app ./app
 COPY main.py ./main.py

@@ -1,6 +1,6 @@
-# CaliGuia XTTS Worker
+# CaliGuia F5-TTS Worker
 
-FastAPI service for local/open-source voice cloning with Coqui XTTS-v2.
+FastAPI service for local/open-source voice cloning with F5-TTS.
 
 ## Local
 
@@ -14,8 +14,16 @@ python -m venv .venv
 The Next.js app calls this service through:
 
 ```env
-XTTS_API_URL=http://127.0.0.1:8010/tts
+F5_TTS_API_URL=http://127.0.0.1:8010/tts
 ```
+
+`POST /tts` expects multipart form data:
+
+- `text`: text to synthesize.
+- `speaker_wav`: 5-12 seconds of clean reference voice.
+- `reference_text`: exact transcript of `speaker_wav`.
+
+`reference_text` is required on purpose. F5-TTS can transcribe the reference audio, but that loads Whisper and hurts latency.
 
 ## Docker
 
@@ -29,7 +37,7 @@ docker run --rm -p 8010:8080 caliguia-voice-worker
 Deploy this folder as its own Cloud Run service. Then set the Next.js service env var:
 
 ```env
-XTTS_API_URL=https://YOUR-VOICE-WORKER.run.app/tts
+F5_TTS_API_URL=https://YOUR-VOICE-WORKER.run.app/tts
 ```
 
 Recommended starting resources:
@@ -41,4 +49,4 @@ Concurrency: 1-4
 Timeout: 300s
 ```
 
-XTTS is model-heavy, so the first request after a cold start can be slow while the model loads.
+F5-TTS downloads and loads model weights on first startup. For Spanish production voices, prefer a Spanish F5 checkpoint by setting `F5_TTS_CKPT_FILE` and `F5_TTS_VOCAB_FILE`.

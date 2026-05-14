@@ -1,6 +1,7 @@
 import logging
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 import soundfile as sf
@@ -24,13 +25,22 @@ class MissingReferenceTextError(ValueError):
 class F5TtsService:
     def __init__(self) -> None:
         self._model: F5TTS | None = None
+        self._device: str | None = None
 
     def _get_model(self) -> F5TTS:
         if self._model is None:
             settings = get_settings()
             use_gpu = torch.cuda.is_available() and not settings.force_cpu
             device = "cuda" if use_gpu else "cpu"
-            logger.info("Loading F5-TTS model '%s' on %s", settings.model_name, device)
+            self._device = device
+            logger.info(
+                "Loading F5-TTS model '%s' on %s (cuda_available=%s, force_cpu=%s)",
+                settings.model_name,
+                device,
+                torch.cuda.is_available(),
+                settings.force_cpu,
+            )
+            start = time.perf_counter()
             self._model = F5TTS(
                 model=settings.model_name,
                 ckpt_file=settings.ckpt_file,
@@ -38,6 +48,7 @@ class F5TtsService:
                 device=device,
                 hf_cache_dir=settings.hf_cache_dir,
             )
+            logger.info("F5-TTS model loaded in %.2fs on %s", time.perf_counter() - start, device)
         return self._model
 
     def preload(self) -> None:
@@ -56,6 +67,7 @@ class F5TtsService:
 
         suffix = speaker_suffix or ".wav"
         settings = get_settings()
+        total_start = time.perf_counter()
 
         with tempfile.TemporaryDirectory() as tmpdir:
             speaker_path = Path(tmpdir) / f"speaker{suffix}"
@@ -63,9 +75,25 @@ class F5TtsService:
             output_path = Path(tmpdir) / "speech.wav"
 
             speaker_path.write_bytes(speaker_bytes)
-            self._normalize_speaker_audio(speaker_path, normalized_speaker_path)
+            logger.info(
+                "TTS request: text_chars=%s ref_chars=%s speaker_bytes=%s nfe_step=%s cfg_strength=%s speed=%s remove_silence=%s device=%s",
+                len(text),
+                len(clean_reference_text),
+                len(speaker_bytes),
+                settings.nfe_step,
+                settings.cfg_strength,
+                settings.speed,
+                settings.remove_silence,
+                self._device or "not_loaded",
+            )
 
-            self._get_model().infer(
+            normalize_start = time.perf_counter()
+            self._normalize_speaker_audio(speaker_path, normalized_speaker_path)
+            logger.info("Speaker normalization completed in %.2fs", time.perf_counter() - normalize_start)
+
+            model = self._get_model()
+            infer_start = time.perf_counter()
+            model.infer(
                 ref_file=str(normalized_speaker_path),
                 ref_text=clean_reference_text,
                 gen_text=text,
@@ -79,9 +107,18 @@ class F5TtsService:
                 show_info=logger.info,
                 progress=None,
             )
+            infer_seconds = time.perf_counter() - infer_start
 
             final_path = Path(tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name)
             final_path.write_bytes(output_path.read_bytes())
+            output_bytes = final_path.stat().st_size
+            logger.info(
+                "TTS infer completed in %.2fs, total %.2fs, output_bytes=%s, device=%s",
+                infer_seconds,
+                time.perf_counter() - total_start,
+                output_bytes,
+                self._device or "unknown",
+            )
             return final_path
 
     def _normalize_speaker_audio(self, input_path: Path, output_path: Path) -> None:
@@ -114,3 +151,5 @@ class F5TtsService:
 
 
 f5_tts_service = F5TtsService()
+
+

@@ -28,7 +28,7 @@ F5_TTS_API_URL=http://127.0.0.1:8010/tts
 ## Docker
 
 ```powershell
-docker build -t caliguia-voice-worker ./worker
+docker build -t caliguia-voice-worker .
 docker run --rm -p 8010:8080 caliguia-voice-worker
 ```
 

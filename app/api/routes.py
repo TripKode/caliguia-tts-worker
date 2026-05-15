@@ -19,6 +19,13 @@ def health():
     return {"ok": True, "engine": "f5-tts", "model": settings.model_name}
 
 
+OFFICIAL_VOICE_REFERENCE_TEXT = (
+    "Hola, bienvenido a CaliGuia. Soy tu guía en este recorrido por la hermosa ciudad de Cali. "
+    "Juntos descubriremos la historia, el ritmo y el sabor que hacen de la sucursal del cielo "
+    "un lugar único en el mundo."
+)
+
+
 @router.post("/tts")
 async def tts(
     text: str = Form(...),
@@ -43,7 +50,12 @@ async def tts(
         clean_language = "es"
 
     speaker_suffix = Path(speaker_wav.filename or "speaker.wav").suffix or ".wav"
-    clean_reference_text = reference_text or ref_text or speaker_text
+    
+    # Use hardcoded text for official voices (system:*)
+    if voice_id and voice_id.startswith("system:"):
+        clean_reference_text = OFFICIAL_VOICE_REFERENCE_TEXT
+    else:
+        clean_reference_text = reference_text or ref_text or speaker_text
     try:
         output_path = f5_tts_service.synthesize(
             text=clean_text,

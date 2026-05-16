@@ -26,20 +26,16 @@ RUN apt-get update \
     git \
   && rm -rf /var/lib/apt/lists/*
 
-# Install CPU version of PyTorch first to ensure it doesn't pull CUDA versions
+# Install Python dependencies
+COPY requirements.txt .
 RUN python -m pip install --upgrade pip \
-  && python -m pip install torch==2.8.0+cpu torchaudio==2.8.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+  && python -m pip install --no-cache-dir torch==2.8.0+cpu torchaudio==2.8.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
 
-RUN python -m pip install \
-    fastapi==0.124.0 \
-    python-multipart==0.0.20 \
-    soundfile==0.13.1 \
-    f5-tts==1.1.20 \
-    uvicorn[standard]==0.38.0
+RUN python -m pip install --no-cache-dir -r requirements.txt
 
 RUN python -c "from huggingface_hub import hf_hub_download; import os; repo=os.environ['F5_TTS_SPANISH_REPO']; target='/app/models/F5-Spanish'; os.makedirs(target, exist_ok=True); hf_hub_download(repo_id=repo, filename='model_1200000.safetensors', local_dir=target); hf_hub_download(repo_id=repo, filename='vocab.txt', local_dir=target)"
 
-# Load once during build to validate and preload
+# Validate installation and preload model
 RUN python -c "import os; from f5_tts.api import F5TTS; F5TTS(model=os.environ['F5_TTS_MODEL_NAME'], ckpt_file=os.environ['F5_TTS_CKPT_FILE'], vocab_file=os.environ['F5_TTS_VOCAB_FILE'], device='cpu')"
 
 COPY app ./app

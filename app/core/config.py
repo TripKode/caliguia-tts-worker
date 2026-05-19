@@ -9,6 +9,8 @@ class Settings(BaseModel):
     vocab_file: str = ""
     hf_cache_dir: str | None = None
     max_text_chars: int = 900
+    max_chunk_chars: int = 220
+    min_reference_match_score: float = 0.82
     force_cpu: bool = False
     preload_on_startup: bool = False
     supported_languages: set[str] = {"es", "en", "pt"}
@@ -28,6 +30,8 @@ def get_settings() -> Settings:
         vocab_file=os.getenv("F5_TTS_VOCAB_FILE", Settings().vocab_file),
         hf_cache_dir=os.getenv("F5_TTS_HF_CACHE_DIR") or Settings().hf_cache_dir,
         max_text_chars=int(os.getenv("F5_TTS_MAX_TEXT_CHARS", str(Settings().max_text_chars))),
+        max_chunk_chars=int(os.getenv("F5_TTS_MAX_CHUNK_CHARS", str(Settings().max_chunk_chars))),
+        min_reference_match_score=float(os.getenv("F5_TTS_MIN_REFERENCE_MATCH_SCORE", str(Settings().min_reference_match_score))),
         force_cpu=os.getenv("F5_TTS_FORCE_CPU", "0") == "1",
         preload_on_startup=os.getenv("F5_TTS_PRELOAD_ON_STARTUP", "0") == "1",
         nfe_step=int(os.getenv("F5_TTS_NFE_STEP", str(Settings().nfe_step))),

@@ -51,8 +51,9 @@ async def tts(
 
     speaker_suffix = Path(speaker_wav.filename or "speaker.wav").suffix or ".wav"
     
-    # Use hardcoded text for official voices (system:*)
-    if voice_id and voice_id.startswith("system:"):
+    # Prefer the app-provided transcript. The hardcoded official text is only
+    # a compatibility fallback for older clients.
+    if voice_id and voice_id.startswith("system:") and not reference_text:
         clean_reference_text = OFFICIAL_VOICE_REFERENCE_TEXT
     else:
         clean_reference_text = reference_text or ref_text or speaker_text
@@ -83,3 +84,37 @@ async def tts(
         filename="caliguia-voice.wav",
         background=BackgroundTask(output_path.unlink, missing_ok=True),
     )
+
+
+@router.post("/validate-reference")
+async def validate_reference(
+    reference_text: str = Form(...),
+    language: str = Form("es"),
+    speaker_wav: UploadFile = File(...),
+):
+    settings = get_settings()
+    clean_reference_text = reference_text.strip()
+    clean_language = language.strip().lower()
+    if not clean_reference_text:
+        raise HTTPException(status_code=400, detail="Missing reference_text")
+
+    if clean_language not in settings.supported_languages:
+        clean_language = "es"
+
+    speaker_suffix = Path(speaker_wav.filename or "speaker.wav").suffix or ".wav"
+
+    try:
+        result = f5_tts_service.validate_reference(
+            speaker_bytes=await speaker_wav.read(),
+            speaker_suffix=speaker_suffix,
+            reference_text=clean_reference_text,
+            language=clean_language,
+        )
+    except InvalidSpeakerAudioError as exc:
+        logger.warning("Invalid speaker audio during validation: %s", exc)
+        raise HTTPException(status_code=400, detail="Invalid speaker audio") from exc
+    except Exception as exc:
+        logger.exception("Reference validation failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Reference validation failed") from exc
+
+    return result
